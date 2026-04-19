@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<section class="hero">
+  <div class="hero-left">
+    <h1>Akıllı Sinyaller, Temiz Arayüz</h1>
+    <p>Gerçek zamanlı analiz ve basit performans özeti. Hızlı, net ve kullanıcı dostu.</p>
+    <div class="kpis">
+      <div class="kpi"><span id="kpiSignals">—</span><label>Güncel Sinyal</label></div>
+      <div class="kpi"><span id="kpiHit">—</span><label>Tahmini İsabet*</label></div>
+      <div class="kpi"><span id="kpiWin">—</span><label>Son 24s PnL*</label></div>
+    </div>
+    <small class="muted">*Simülasyon amaçlı görseller</small>
+  </div>
+  <div class="hero-right card">
+    <canvas id="pnl"></canvas>
+  </div>
+</section>
+
+<section class="controls card">
+  <div class="control-row">
+    <input id="search" class="input" type="text" placeholder="Sembol ara (BTC, ETH, EURUSD...)">
+    <select id="symbolFilter" class="input">
+      <option value="">Tümü</option>
+      <option>BTCUSDT</option>
+      <option>ETHUSDT</option>
+      <option>XAUUSD</option>
+      <option>EURUSD</option>
+      <option>BIST:THYAO</option>
+    </select>
+    <div class="segmented">
+      <button class="seg active" data-side="">Hepsi</button>
+      <button class="seg" data-side="long">Long</button>
+      <button class="seg" data-side="short">Short</button>
+      <button class="seg" data-side="flat">Flat</button>
+    </div>
+
+    <!-- Tarih aralığı -->
+    <input id="fromDate" class="input" type="datetime-local" placeholder="Başlangıç">
+    <input id="toDate" class="input" type="datetime-local" placeholder="Bitiş">
+
+    <button id="refresh" class="btn">Yenile ↻</button>
+  </div>
+</section>
+
+<!-- SİMÜLASYON BLOĞU -->
+<section class="card" style="margin-top:16px">
+  <div class="table-head">
+    <h2>Simülasyon</h2>
+    <span class="muted">Sinyallerden PnL simülasyonu (istemci tarafı). Seçili satırlar veya aktif filtre ile çalıştır.</span>
+  </div>
+
+  <div class="controls control-row" style="margin-bottom:10px">
+    <input id="simCapital" class="input" type="number" min="100" value="10000" placeholder="Başlangıç sermayesi">
+    <input id="simFeePct" class="input" type="number" step="0.01" value="0.05" placeholder="Komisyon %">
+    <input id="simTP" class="input" type="number" step="0.1" value="1.5" placeholder="Varsayılan TP %">
+    <input id="simSL" class="input" type="number" step="0.1" value="1.0" placeholder="Varsayılan SL %">
+    <label style="display:flex;align-items:center;gap:6px">
+      <input id="useSignalLevels" type="checkbox" checked>
+      <span class="muted">Sinyal TP/SL kullan</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px">
+      <input id="useConfidence" type="checkbox" checked>
+      <span class="muted">Kazanma olasılığı için <code>confidence</code> kullan</span>
+    </label>
+  </div>
+
+  <div class="controls control-row" style="margin-bottom:10px">
+    <label style="display:flex;align-items:center;gap:6px">
+      <input id="useSelectedRows" type="checkbox">
+      <span class="muted">Sadece <b>seçili satırlar</b> ile simüle et</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px">
+      <input id="useActiveFilters" type="checkbox" checked>
+      <span class="muted">Şu anki <b>filtre</b> ile simüle et</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px">
+      <input id="fixedWinLoss" type="checkbox">
+      <span class="muted">Deterministik: TP kazanır, SL kaybeder (confidence yok say)</span>
+    </label>
+    <button id="runSim" class="btn primary">Simülasyonu Çalıştır</button>
+  </div>
+
+  <div class="kpis" style="margin-bottom:10px">
+    <div class="kpi"><span id="simTrades">—</span><label>İşlem Sayısı</label></div>
+    <div class="kpi"><span id="simWinRate">—</span><label>Kazanma Oranı</label></div>
+    <div class="kpi"><span id="simAvgPnl">—</span><label>Ort. İşlem Getirisi</label></div>
+    <div class="kpi"><span id="simTotalRet">—</span><label>Toplam Getiri</label></div>
+    <div class="kpi"><span id="simMaxDD">—</span><label>Maks. Drawdown</label></div>
+  </div>
+
+  <div class="card">
+    <canvas id="simChart"></canvas>
+  </div>
+  <small class="muted">Not: Bu basit bir simülasyondur; eğitim ve analiz amaçlıdır.</small>
+</section>
+
+<section class="card table-card">
+  <div class="table-head">
+    <h2>Güncel Sinyaller</h2>
+    <span id="lastUpdated" class="muted"></span>
+  </div>
+  <div class="table-wrap">
+    <table id="signalsTable">
+      <thead>
+        <tr>
+          <th style="width:36px"><input id="selectAll" type="checkbox" title="Tümünü seç"></th>
+          <th>Zaman (UTC)</th>
+          <th>Sembol</th>
+          <th>Yön</th>
+          <th>Giriş</th>
+          <th>Stop</th>
+          <th>TP</th>
+          <th>Güven</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        {% for s in signals %}
+        <tr data-idx="{{ loop.index0 }}" data-symbol="{{ s.symbol }}" data-side="{{ s.side }}" data-ts="{{ s.timestamp }}">
+          <td><input class="rowSel" type="checkbox"></td>
+          <td>{{ s.timestamp }}</td>
+          <td class="mono">{{ s.symbol }}</td>
+          <td><span class="pill {{ s.side }}">{{ s.side }}</span></td>
+          <td class="num">{{ s.entry }}</td>
+          <td class="num">{{ s.stop }}</td>
+          <td class="num">{{ s.tp }}</td>
+          <td class="num">{{ (s.confidence*100)|round(0) if s.confidence <=1 else (s.confidence)|round(0) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}

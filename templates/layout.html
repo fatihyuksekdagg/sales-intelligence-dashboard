@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Finans Analiz Paneli (Beta)</title>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Uygulama JS -->
+  <script defer src="{{ url_for('static', filename='main.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">FA</div>
+      <div class="brand-text">
+        <strong>Finans Analiz</strong><span class="badge">BETA</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="themeToggle" class="btn ghost" title="Tema değiştir">🌓</button>
+      <a href="https://t.me/" target="_blank" class="btn primary" rel="noopener">Topluluğa Katıl</a>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="legal">
+      Bu panelde yer alan bilgi, yorum ve tavsiyeler <b>yatırım danışmanlığı kapsamında değildir</b>.
+      Yalnızca eğitim ve analiz amacı taşır. Kararlarınızı kendi araştırmanıza dayanarak veriniz.
+    </div>
+    <div class="footnote">© {{ 2025 }} Finans Analiz (Beta)</div>
+  </footer>
+</body>
+</html>
